@@ -2,8 +2,8 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PascalGames Mobile V6</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>PascalGames V7 Final</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
@@ -11,39 +11,64 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
     <style>
-        body, html { margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; background-color: #000; }
+        /* --- ESTILOS BASE PARA RESPONSIVIDAD TOTAL --- */
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #000; 
+            /* Evitar comportamientos táctiles por defecto del navegador */
+            touch-action: none;
+        }
         
-        /* CONTENEDORES VIDEO */
-        .camera-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; background: #000; }
-        /* El video real se deja invisible, pintamos en el canvas */
-        .input_video { display: none; position: absolute; top:0; left:0; } 
-        .output_canvas { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        /* --- CONTENEDOR DE VIDEO (FONDO AR) --- */
+        .camera-container { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; background: #000;
+        }
+        .input_video { display: none; } /* Video crudo oculto */
+        
+        /* Canvas ajustado para cubrir siempre la pantalla manteniendo relación de aspecto */
+        .output_canvas { 
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            min-width: 100%;
+            min-height: 100%;
+            width: auto;
+            height: auto;
+            /* Centrar y aplicar modo espejo */
+            transform: translate(-50%, -50%) scaleX(-1);
+            object-fit: cover;
+        }
 
-        /* HUD Y JUEGO */
+        /* --- CAPAS DEL JUEGO --- */
         #game-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
-        #hud { position: absolute; top: 0; width: 100%; text-align: center; z-index: 15; padding: 10px 0; background: rgba(0,0,0,0.3); }
-        .target-box { display: inline-block; width: 45px; height: 45px; margin: 3px; background: rgba(255,255,255,0.9); border-radius: 8px; font-size: 28px; line-height: 45px; font-weight: bold; color: #333; }
+        
+        /* HUD Superior */
+        #hud { 
+            position: absolute; top: 0; width: 100%; text-align: center; z-index: 15; 
+            padding: 15px 0; background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent); 
+            /* Asegurar que no quede debajo de la 'muesca' o notch del celular */
+            padding-top: env(safe-area-inset-top, 15px);
+        }
+        .target-box { display: inline-block; width: 50px; height: 50px; margin: 4px; background: rgba(255,255,255,0.9); border-radius: 10px; font-size: 32px; line-height: 50px; font-weight: bold; color: #333; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
         .filled { background: #4CAF50; color: white; }
         
-        /* BURBUJAS Y CURSOR */
-        .bubble { position: absolute; width: 75px; height: 75px; background: gold; border: 3px solid white; border-radius: 50%; text-align: center; line-height: 70px; font-size: 35px; font-weight: bold; color: #d84315; cursor: pointer; pointer-events: auto; animation: float 3s infinite ease-in-out alternate; }
-        #finger-cursor { position: absolute; width: 20px; height: 20px; background: rgba(255,0,0,0.5); border: 2px solid white; border-radius: 50%; z-index: 20; display: none; pointer-events: none; }
+        /* Burbujas y Cursor */
+        .bubble { position: absolute; width: 80px; height: 80px; background: radial-gradient(#FFD700, #FFA500); border: 3px solid white; border-radius: 50%; text-align: center; line-height: 75px; font-size: 40px; font-weight: bold; color: #d84315; cursor: pointer; pointer-events: auto; animation: float 3.5s infinite ease-in-out alternate; box-shadow: 0 4px 8px rgba(0,0,0,0.3); -webkit-tap-highlight-color: transparent; }
+        #finger-cursor { position: absolute; width: 24px; height: 24px; background: rgba(255, 50, 50, 0.7); border: 3px solid white; border-radius: 50%; z-index: 20; display: none; pointer-events: none; box-shadow: 0 0 10px rgba(255,50,50,0.8); }
 
-        /* PANTALLAS */
-        .screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #111; z-index: 50; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; padding: 20px; }
-        button { padding: 15px 40px; font-size: 20px; background: #2196F3; color: white; border: none; border-radius: 50px; margin-top: 20px; }
+        /* Pantallas (Menú/Win) */
+        .screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 15, 15, 0.95); z-index: 50; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; padding: 20px; box-sizing: border-box;}
+        button { padding: 18px 45px; font-size: 22px; background: linear-gradient(45deg, #2196F3, #00BCD4); color: white; border: none; border-radius: 50px; margin-top: 25px; box-shadow: 0 4px 15px rgba(33, 150, 243, 0.4); }
         .hidden { display: none !important; }
         
-        /* CONSOLA DE DEPURACIÓN (VISIBLE SOLO SI HAY ERROR) */
-        #debug-console { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.8); color: red; font-size: 10px; padding: 5px; z-index: 100; text-align: left; max-height: 100px; overflow: scroll; pointer-events: none; }
-        
-        @keyframes float { 0% {transform: translateY(0);} 100% {transform: translateY(-15px);} }
+        @keyframes float { 0% {transform: translateY(0);} 100% {transform: translateY(-18px);} }
     </style>
 </head>
 <body>
 
     <div class="camera-container">
-        <video class="input_video" playsinline muted></video>
+        <video class="input_video" playsinline muted autoplay></video>
         <canvas class="output_canvas"></canvas>
     </div>
 
@@ -52,132 +77,119 @@
     <div id="hud" class="hidden"><div id="slots-container"></div></div>
 
     <div id="main-menu" class="screen">
-        <h1 style="color: gold;">PascalGames V6</h1>
-        <p>Versión "Todo Terreno"</p>
-        <button onclick="startSystem()">INICIAR CÁMARA</button>
-        <p id="status-msg" style="margin-top:20px; color:#aaa; font-size: 14px;">Listo para cargar</p>
+        <h1 style="color: #FFD700; font-size: 2.5rem; margin-bottom: 10px;">PascalGames AR</h1>
+        <p style="font-size: 1.2rem; color: #ddd;">Aventura de Palabras</p>
+        <button onclick="startSystem()">ACTIVAR CÁMARA 📷</button>
+        <p id="status-msg" style="margin-top:25px; color:#aaa; font-size: 1rem;">Usa tu dedo para tocar las letras</p>
     </div>
 
     <div id="win-screen" class="screen hidden">
-        <h2 id="win-word" style="font-size: 40px; color: #4CAF50;">PALABRA</h2>
-        <img id="reward-image" style="width:250px; height:250px; object-fit:cover; border-radius:15px; margin:20px; background:#333;" src="" alt="">
-        <button onclick="nextLevel()">Siguiente ➡️</button>
+        <h2 id="win-word" style="font-size: 3rem; color: #4CAF50; margin: 10px 0;">PALABRA</h2>
+        <img id="reward-image" style="width:80%; max-width:300px; height:250px; object-fit:cover; border-radius:15px; margin:20px 0; background:#333; border: 4px solid white;" src="" alt="">
+        <button onclick="nextLevel()" style="background: linear-gradient(45deg, #4CAF50, #8BC34A);">Siguiente ➡️</button>
     </div>
 
-    <div id="debug-console"></div>
-
     <script>
-        // === CONFIGURACIÓN ===
+        // === CONFIGURACIÓN DEL JUEGO ===
+        // Se pueden añadir muchas más palabras aquí
         const database = [
-            {word:"MAMA",tag:"mom"}, {word:"PAPA",tag:"dad"}, {word:"OSITO",tag:"teddy bear"},
+            {word:"MAMA",tag:"mom"}, {word:"PAPA",tag:"dad"}, {word:"CASA",tag:"house"},
             {word:"PERRO",tag:"dog"}, {word:"GATO",tag:"cat"}, {word:"AUTO",tag:"car"},
-            {word:"SOL",tag:"sun"}, {word:"LUNA",tag:"moon"}, {word:"FLOR",tag:"flower"}
+            {word:"SOL",tag:"sun"}, {word:"LUNA",tag:"moon"}, {word:"FLOR",tag:"flower"},
+            {word:"ARBOL",tag:"tree"}, {word:"PELOTA",tag:"ball"}, {word:"PATO",tag:"duck"},
+            {word:"LEON",tag:"lion"}, {word:"PEZ",tag:"fish"}, {word:"AGUA",tag:"water"}
         ];
         
+        // Variables Globales
         const videoElement = document.querySelector('.input_video');
         const canvasElement = document.querySelector('.output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
-        const debugConsole = document.getElementById('debug-console');
         const fingerCursor = document.getElementById('finger-cursor');
-        let hands;
-        let camera;
-        let currentLevel;
-        let currentIdx = 0;
+        let hands, currentLevel, currentIdx = 0;
 
-        // Función para escribir errores en pantalla
-        function log(msg) {
-            console.log(msg);
-            debugConsole.innerText += "\n> " + msg;
+        // --- SISTEMA DE RESPONSIVIDAD DINÁMICA ---
+        // Esta función asegura que el canvas siempre tenga la resolución exacta de la pantalla
+        function resizeCanvas() {
+            canvasElement.width = window.innerWidth;
+            canvasElement.height = window.innerHeight;
         }
+        // Escuchar cambios de tamaño (giro de pantalla, barras de navegación, etc.)
+        window.addEventListener('resize', resizeCanvas);
+        // Llamada inicial
+        resizeCanvas();
 
+        // --- INICIO DEL SISTEMA ---
         async function startSystem() {
             const btn = document.querySelector('#main-menu button');
             const status = document.getElementById('status-msg');
             btn.style.display = 'none';
-            status.innerText = "Solicitando cámara...";
-            log("Iniciando sistema...");
-
-            // Ajustar canvas
-            canvasElement.width = window.innerWidth;
-            canvasElement.height = window.innerHeight;
+            status.innerText = "Iniciando cámara e inteligencia artificial...";
 
             try {
-                // 1. Iniciar MediaPipe
-                log("Cargando IA de manos...");
-                hands = new Hands({locateFile: (file) => {
-                    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-                }});
-                
+                // 1. Configurar MediaPipe (IA de manos) - Modelo Lite para móviles rápidos
+                hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
                 hands.setOptions({
                     maxNumHands: 1,
-                    modelComplexity: 0, // 0 es más rápido para móviles (Lite)
+                    modelComplexity: 0, // 0 = Lite (Rápido), 1 = Full (Preciso)
                     minDetectionConfidence: 0.5,
                     minTrackingConfidence: 0.5
                 });
-                
                 hands.onResults(onHandsResults);
 
-                // 2. Iniciar Cámara (NUEVO MÉTODO MANUAL)
-                log("Accediendo a cámara...");
-                
-                // NO pedimos resolución específica, dejamos que el navegador decida
-                const constraints = { 
-                    video: { 
-                        facingMode: 'user', // Cámara frontal
-                        width: { ideal: 640 }, // Preferimos baja res para rendimiento
-                        height: { ideal: 480 } 
-                    } 
-                };
-
-                // Usamos getUserMedia nativo en lugar de la utilidad de MediaPipe
-                // Esto es mucho más compatible con Android
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                // 2. Configurar Cámara Nativa
+                // Pedimos cámara frontal ('user') y una resolución ideal, pero aceptamos lo que dé el celular
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } 
+                });
                 videoElement.srcObject = stream;
                 
-                // Esperar a que el video tenga datos
+                // Cuando el video arranque, empezamos a procesar
                 videoElement.onloadedmetadata = () => {
-                    log("Cámara lista. Reproduciendo...");
                     videoElement.play();
-                    startProcessing(); // Iniciar bucle de IA
+                    startProcessing();
+                    // Ocultar menú y empezar juego
+                    document.getElementById('main-menu').classList.add('hidden');
+                    document.getElementById('hud').classList.remove('hidden');
+                    nextLevel();
                 };
 
-                // Ocultar menú
-                document.getElementById('main-menu').classList.add('hidden');
-                document.getElementById('hud').classList.remove('hidden');
-                nextLevel();
-
             } catch (error) {
-                log("ERROR FATAL: " + error.name + " - " + error.message);
-                alert("Error: " + error.message + ". Revisa que el sitio sea HTTPS y hayas dado permiso.");
+                console.error(error);
+                alert("Error: No se pudo acceder a la cámara. Verifica los permisos.");
+                status.innerText = "Error de acceso. Recarga la página.";
                 btn.style.display = 'block';
             }
         }
 
-        // Bucle manual de procesamiento (Mejor rendimiento en móvil)
+        // Bucle de procesamiento manual (más eficiente en móviles)
         async function startProcessing() {
-            async function step() {
-                if (videoElement.readyState >= 2) {
-                    await hands.send({image: videoElement});
-                }
-                requestAnimationFrame(step);
+            if (videoElement.readyState >= 2) {
+                await hands.send({image: videoElement});
             }
-            step();
+            // Solicitar el siguiente frame de animación
+            requestAnimationFrame(startProcessing);
         }
 
+        // --- RESULTADOS DE LA IA ---
         function onHandsResults(results) {
-            // Dibujar cámara en canvas
+            // 1. Dibujar el video en el canvas (fondo)
             canvasCtx.save();
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            // Usar 'destination-over' asegura que el video quede detrás si ya había algo dibujado
+            canvasCtx.globalCompositeOperation = 'copy'; 
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
             
+            // 2. Procesar la mano si se detecta
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                const tip = results.multiHandLandmarks[0][8]; // Punta índice
-                const x = (1 - tip.x) * window.innerWidth;
+                const tip = results.multiHandLandmarks[0][8]; // Punta del dedo índice
+                // Convertir coordenadas normalizadas (0-1) a píxeles
+                const x = (1 - tip.x) * window.innerWidth; // Invertir X por el espejo
                 const y = tip.y * window.innerHeight;
                 
+                // Mover el cursor rojo
                 fingerCursor.style.display = 'block';
-                fingerCursor.style.left = (x - 10) + 'px';
-                fingerCursor.style.top = (y - 10) + 'px';
+                // Centrar el cursor en la punta del dedo
+                fingerCursor.style.left = (x - fingerCursor.offsetWidth/2) + 'px';
+                fingerCursor.style.top = (y - fingerCursor.offsetHeight/2) + 'px';
                 
                 checkCollision(x, y);
             } else {
@@ -186,16 +198,24 @@
             canvasCtx.restore();
         }
 
+        // --- LÓGICA DEL JUEGO ---
         let lastHit = 0;
         function checkCollision(x, y) {
-            if(Date.now() - lastHit < 500) return;
+            // Evitar toques múltiples muy rápidos (cooldown de 400ms)
+            if(Date.now() - lastHit < 400) return;
             
             const bubbles = document.querySelectorAll('.bubble');
             bubbles.forEach(b => {
                 const rect = b.getBoundingClientRect();
-                const dist = Math.hypot(x - (rect.left + rect.width/2), y - (rect.top + rect.height/2));
+                const radius = rect.width / 2;
+                const centerX = rect.left + radius;
+                const centerY = rect.top + radius;
                 
-                if (dist < rect.width/2 + 10) {
+                // Calcular distancia entre el dedo y el centro de la burbuja
+                const dist = Math.hypot(x - centerX, y - centerY);
+                
+                // Si la distancia es menor al radio (con un pequeño margen extra de 5px)
+                if (dist < radius + 5) {
                     lastHit = Date.now();
                     handleInput(b);
                 }
@@ -205,10 +225,12 @@
         function nextLevel() {
             document.getElementById('win-screen').classList.add('hidden');
             currentIdx = 0;
+            // Elegir palabra al azar (simple)
             currentLevel = database[Math.floor(Math.random() * database.length)];
             
             const slots = document.getElementById('slots-container');
             slots.innerHTML = '';
+            // Crear espacios para las letras
             for (let char of currentLevel.word) {
                 let s = document.createElement('div');
                 s.className = 'target-box';
@@ -217,7 +239,7 @@
             }
             
             spawnBubbles(currentLevel.word);
-            speak("Vamos a escribir " + currentLevel.word);
+            speak("Vamos a escribir... " + currentLevel.word.toLowerCase());
         }
 
         function spawnBubbles(word) {
@@ -225,53 +247,67 @@
             cont.innerHTML = '';
             const letters = word.split('').sort(() => Math.random() - 0.5);
             
+            // Márgenes seguros para que las burbujas no queden en los bordes
+            const marginX = 80;
+            const marginYTop = 150; // Espacio para el HUD
+            const marginYBottom = 100;
+
             letters.forEach(char => {
                 let b = document.createElement('div');
                 b.className = 'bubble';
                 b.innerText = char;
-                b.style.left = Math.random() * (window.innerWidth - 80) + 'px';
-                b.style.top = (100 + Math.random() * (window.innerHeight - 250)) + 'px';
+                // Posición aleatoria dentro de los márgenes seguros
+                b.style.left = (marginX/2 + Math.random() * (window.innerWidth - marginX)) + 'px';
+                b.style.top = (marginYTop + Math.random() * (window.innerHeight - marginYTop - marginYBottom)) + 'px';
                 
-                // Soporte Touch + Click
-                b.onclick = () => handleInput(b);
-                b.ontouchend = (e) => { e.preventDefault(); handleInput(b); };
+                // Soporte híbrido: funciona con el cursor de IA y también con toque directo en pantalla
+                const trigger = (e) => { if(e.preventDefault) e.preventDefault(); handleInput(b); };
+                b.addEventListener('touchstart', trigger, {passive:false});
+                b.addEventListener('click', trigger);
                 
                 cont.appendChild(b);
             });
         }
 
         function handleInput(b) {
+            // Verificar si es la letra correcta en el orden correcto
             if (b.innerText === currentLevel.word[currentIdx]) {
-                speak(b.innerText);
+                speak(b.innerText.toLowerCase());
+                // Animación de éxito
                 b.style.transform = "scale(1.5)";
                 b.style.opacity = "0";
                 setTimeout(() => b.remove(), 200);
                 
+                // Llenar el espacio correspondiente
                 const slots = document.querySelectorAll('.target-box');
                 slots[currentIdx].innerText = b.innerText;
                 slots[currentIdx].classList.add('filled');
                 currentIdx++;
                 
+                // Verificar si completó la palabra
                 if (currentIdx >= currentLevel.word.length) winGame();
             } else {
-                b.style.backgroundColor = 'red';
-                speak("No");
+                // Error visual y táctil
+                b.style.background = 'red';
+                speak("Esa no");
                 if(navigator.vibrate) navigator.vibrate(200);
-                setTimeout(() => b.style.backgroundColor = 'gold', 500);
+                setTimeout(() => b.style.background = 'radial-gradient(#FFD700, #FFA500)', 500);
             }
         }
 
         function winGame() {
             document.getElementById('win-word').innerText = currentLevel.word;
-            document.getElementById('reward-image').src = `https://loremflickr.com/300/300/${currentLevel.tag}?lock=${Date.now()}`;
+            // Cargar imagen de recompensa (usa timestamp para evitar caché)
+            document.getElementById('reward-image').src = `https://loremflickr.com/400/300/${currentLevel.tag}?lock=${Date.now()}`;
             document.getElementById('win-screen').classList.remove('hidden');
-            speak("¡Muy bien!");
+            speak(`¡Excelente! Escribiste ${currentLevel.word.toLowerCase()}`);
         }
 
+        // Función de texto a voz
         function speak(text) {
             if(window.speechSynthesis.speaking) window.speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(text);
-            u.lang = 'es-ES';
+            u.lang = 'es-ES'; // Español
             window.speechSynthesis.speak(u);
         }
     </script>
