@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>PascalGames V8 Final</title>
+    <title>PascalGames V9 - Educativo</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
@@ -11,73 +11,70 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
     <style>
-        /* --- ESTILOS GENERALES --- */
         body, html { 
             margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; 
-            font-family: 'Segoe UI', sans-serif; background-color: #000; 
-            touch-action: none; /* Bloquea zoom y scroll */
+            font-family: 'Segoe UI', Roboto, sans-serif; background-color: #000; 
+            touch-action: none; 
         }
         
-        /* --- VIDEO Y CANVAS (FONDO) --- */
+        /* FONDO CÁMARA */
         .camera-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; background: #000; }
         .input_video { display: none; }
         .output_canvas { 
             position: absolute; top: 50%; left: 50%; 
             min-width: 100%; min-height: 100%; width: auto; height: auto; 
-            transform: translate(-50%, -50%) scaleX(-1); /* Espejo y centrado */
-            object-fit: cover; 
+            transform: translate(-50%, -50%) scaleX(-1); object-fit: cover; 
         }
 
-        /* --- CAPAS DE JUEGO --- */
+        /* CAPAS */
         #game-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
         
-        /* HUD (Barra Superior) */
         #hud { 
             position: absolute; top: 0; width: 100%; text-align: center; z-index: 15; 
             padding-top: max(15px, env(safe-area-inset-top)); padding-bottom: 10px;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent); 
+            background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent); 
         }
-        .target-box { display: inline-block; width: 45px; height: 45px; margin: 4px; background: rgba(255,255,255,0.9); border-radius: 8px; font-size: 28px; line-height: 45px; font-weight: bold; color: #333; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
-        .filled { background: #4CAF50; color: white; border: 2px solid white; }
         
-        /* BURBUJAS (LETRAS) */
+        /* CASILLAS DE RESPUESTA */
+        .target-box { display: inline-block; width: 45px; height: 45px; margin: 4px; background: rgba(255,255,255,0.95); border-radius: 8px; font-size: 28px; line-height: 45px; font-weight: bold; color: #333; box-shadow: 0 3px 6px rgba(0,0,0,0.4); }
+        .filled { background: #4CAF50; color: white; border: 2px solid #fff; transform: scale(1.05); transition: transform 0.2s; }
+        
+        /* BURBUJAS FLOTANTES */
         .bubble { 
             position: absolute; width: 70px; height: 70px; 
-            background: radial-gradient(#FFD700, #FFA500); 
+            background: radial-gradient(#FFD700, #FF8F00); 
             border: 3px solid white; border-radius: 50%; 
-            text-align: center; line-height: 65px; font-size: 35px; font-weight: bold; color: #d84315; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            text-align: center; line-height: 65px; font-size: 32px; font-weight: bold; color: #bf360c; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
             cursor: pointer; pointer-events: auto; 
-            animation: float 3s infinite ease-in-out alternate;
+            animation: float 3.5s infinite ease-in-out alternate;
             -webkit-tap-highlight-color: transparent;
-            /* Transición suave al aparecer */
             transition: transform 0.2s, opacity 0.2s;
         }
         
-        /* CURSOR ROJO (IA) */
         #finger-cursor { 
-            position: absolute; width: 24px; height: 24px; 
-            background: rgba(255, 0, 0, 0.6); border: 3px solid white; border-radius: 50%; 
+            position: absolute; width: 20px; height: 20px; 
+            background: rgba(255, 0, 50, 0.7); border: 3px solid white; border-radius: 50%; 
             z-index: 20; display: none; pointer-events: none; 
-            box-shadow: 0 0 10px rgba(255,0,0,0.8); 
+            box-shadow: 0 0 15px rgba(255,0,50,0.8); 
         }
 
-        /* PANTALLAS (Menú y Ganar) */
+        /* PANTALLAS */
         .screen { 
             position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(10, 10, 10, 0.95); z-index: 50; 
+            background: rgba(18, 18, 18, 0.96); z-index: 50; 
             display: flex; flex-direction: column; justify-content: center; align-items: center; 
             color: white; text-align: center; padding: 20px; box-sizing: border-box;
         }
         button { 
-            padding: 15px 40px; font-size: 20px; 
-            background: linear-gradient(45deg, #2196F3, #03A9F4); 
+            padding: 16px 45px; font-size: 20px; 
+            background: linear-gradient(45deg, #2196F3, #21CBF3); 
             color: white; border: none; border-radius: 50px; margin-top: 25px; 
-            font-weight: bold; box-shadow: 0 4px 15px rgba(3, 169, 244, 0.4); 
+            font-weight: bold; box-shadow: 0 4px 15px rgba(33, 203, 243, 0.4); 
         }
         .hidden { display: none !important; }
         
-        @keyframes float { 0% {transform: translateY(0);} 100% {transform: translateY(-12px);} }
+        @keyframes float { 0% {transform: translateY(0) rotate(-5deg);} 100% {transform: translateY(-15px) rotate(5deg);} }
     </style>
 </head>
 <body>
@@ -92,61 +89,66 @@
     <div id="hud" class="hidden"><div id="slots-container"></div></div>
 
     <div id="main-menu" class="screen">
-        <h1 style="color: #FFD700; margin-bottom: 5px;">PascalGames</h1>
-        <p style="color: #aaa; font-size: 14px;">Versión 8.0</p>
-        <button onclick="startSystem()">JUGAR AHORA</button>
-        <p id="status-msg" style="margin-top: 20px; font-size: 14px; color: #888;">Cargando...</p>
+        <h1 style="color: #FFD700; font-size: 40px; margin-bottom: 5px;">PascalGames</h1>
+        <p style="color: #ccc;">Aprende y Juega con AR</p>
+        <button onclick="startSystem()">¡A JUGAR!</button>
+        <p id="status-msg" style="margin-top: 20px; font-size: 13px; color: #777;">Versión Educativa V9</p>
     </div>
 
     <div id="win-screen" class="screen hidden">
-        <h2 id="win-word" style="font-size: 40px; color: #4CAF50; margin: 10px 0;">PALABRA</h2>
-        <img id="reward-image" style="width:260px; height:260px; object-fit:cover; border-radius:15px; margin:15px; background:#333; border: 3px solid white;" src="" alt="">
-        <button onclick="nextLevel()" style="background: #4CAF50;">Siguiente ➡️</button>
+        <h2 id="win-word" style="font-size: 45px; color: #4CAF50; margin: 10px 0;">PALABRA</h2>
+        <img id="reward-image" style="width:280px; height:280px; object-fit:cover; border-radius:20px; margin:15px; background:#333; border: 4px solid white;" src="" alt="">
+        <button onclick="nextLevel()" style="background: #4CAF50;">Siguiente Palabra ➡️</button>
     </div>
 
     <script>
-        // === BASE DE DATOS ===
-        const database = [
-            {word:"MAMA",tag:"mom"}, {word:"PAPA",tag:"dad"}, {word:"CASA",tag:"house"},
-            {word:"GATO",tag:"cat"}, {word:"PERRO",tag:"dog"}, {word:"SOL",tag:"sun"},
-            {word:"LUNA",tag:"moon"}, {word:"FLOR",tag:"flower"}, {word:"AUTO",tag:"car"},
-            {word:"AGUA",tag:"water"}, {word:"ARBOL",tag:"tree"}, {word:"OSO",tag:"bear"}
+        // === DICCIONARIO CON TILDES Y ETIQUETAS PARA FOTOS ===
+        const fullDatabase = [
+            {word:"MAMÁ", tag:"mom"}, {word:"PAPÁ", tag:"dad"}, {word:"BEBÉ", tag:"baby"},
+            {word:"ÁRBOL", tag:"tree"}, {word:"AVIÓN", tag:"airplane"}, {word:"LÁPIZ", tag:"pencil"},
+            {word:"LEÓN", tag:"lion"}, {word:"RATÓN", tag:"mouse"}, {word:"JIRAFA", tag:"giraffe"},
+            {word:"PERRO", tag:"dog"}, {word:"GATO", tag:"cat"}, {word:"CASA", tag:"house"},
+            {word:"AUTO", tag:"car"}, {word:"FLOR", tag:"flower"}, {word:"SOL", tag:"sun"},
+            {word:"LUNA", tag:"moon"}, {word:"PEZ", tag:"fish"}, {word:"OJO", tag:"eye"},
+            {word:"MANO", tag:"hand"}, {word:"PIE", tag:"foot"}, {word:"UVA", tag:"grape"},
+            {word:"TREN", tag:"train"}, {word:"PATO", tag:"duck"}, {word:"MESA", tag:"table"}
         ];
 
-        const videoElement = document.querySelector('.input_video');
-        const canvasElement = document.querySelector('.output_canvas');
-        const canvasCtx = canvasElement.getContext('2d');
-        const fingerCursor = document.getElementById('finger-cursor');
-        let hands, currentLevel, currentIdx = 0;
+        // Variables del sistema
+        let deck = []; // Mazo de cartas para no repetir
+        let currentLevel, currentIdx = 0;
+        let hands, videoElement, canvasElement, canvasCtx, fingerCursor;
+        const synth = window.speechSynthesis;
 
-        // === INICIO DEL SISTEMA ===
+        // Cargar voces al inicio para que estén listas
+        let voices = [];
+        window.speechSynthesis.onvoiceschanged = () => { voices = synth.getVoices(); };
+
         async function startSystem() {
             const btn = document.querySelector('#main-menu button');
             const status = document.getElementById('status-msg');
             btn.style.display = 'none';
-            status.innerText = "Iniciando cámara...";
+            status.innerText = "Cargando cámara e inteligencia artificial...";
 
-            // Ajustar tamaño del canvas
+            videoElement = document.querySelector('.input_video');
+            canvasElement = document.querySelector('.output_canvas');
+            canvasCtx = canvasElement.getContext('2d');
+            fingerCursor = document.getElementById('finger-cursor');
+
             resizeCanvas();
             window.addEventListener('resize', resizeCanvas);
 
             try {
-                // 1. Configurar MediaPipe
-                hands = new Hands({locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`});
-                hands.setOptions({
-                    maxNumHands: 1,
-                    modelComplexity: 0, 
-                    minDetectionConfidence: 0.5,
-                    minTrackingConfidence: 0.5
-                });
+                // MediaPipe Setup
+                hands = new Hands({locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
+                hands.setOptions({maxNumHands: 1, modelComplexity: 0, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5});
                 hands.onResults(onHandsResults);
 
-                // 2. Iniciar Cámara
+                // Cámara
                 const stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } } 
                 });
                 videoElement.srcObject = stream;
-                
                 videoElement.onloadedmetadata = () => {
                     videoElement.play();
                     processVideo();
@@ -154,9 +156,8 @@
                     document.getElementById('hud').classList.remove('hidden');
                     nextLevel();
                 };
-
             } catch (error) {
-                alert("Error: " + error.message);
+                alert("Error de cámara: " + error.message);
                 btn.style.display = 'block';
             }
         }
@@ -167,9 +168,7 @@
         }
 
         async function processVideo() {
-            if (videoElement.readyState >= 2) {
-                await hands.send({image: videoElement});
-            }
+            if (videoElement.readyState >= 2) await hands.send({image: videoElement});
             requestAnimationFrame(processVideo);
         }
 
@@ -179,127 +178,90 @@
             canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
             
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                const tip = results.multiHandLandmarks[0][8]; // Dedo índice
+                const tip = results.multiHandLandmarks[0][8];
                 const x = (1 - tip.x) * window.innerWidth;
                 const y = tip.y * window.innerHeight;
                 
                 fingerCursor.style.display = 'block';
-                fingerCursor.style.left = (x - 12) + 'px';
-                fingerCursor.style.top = (y - 12) + 'px';
-                
+                fingerCursor.style.left = (x - 10) + 'px'; fingerCursor.style.top = (y - 10) + 'px';
                 checkCollision(x, y);
-            } else {
-                fingerCursor.style.display = 'none';
-            }
+            } else { fingerCursor.style.display = 'none'; }
             canvasCtx.restore();
         }
 
-        // === LÓGICA DE JUEGO ===
-        let lastHit = 0;
-        function checkCollision(x, y) {
-            if(Date.now() - lastHit < 400) return;
-            
-            const bubbles = document.querySelectorAll('.bubble');
-            bubbles.forEach(b => {
-                const rect = b.getBoundingClientRect();
-                const radius = rect.width / 2;
-                const centerX = rect.left + radius;
-                const centerY = rect.top + radius;
-                const dist = Math.hypot(x - centerX, y - centerY);
-                
-                if (dist < radius + 10) {
-                    lastHit = Date.now();
-                    handleInput(b);
-                }
-            });
+        // === SISTEMA DE MAZO (NO REPETIR) ===
+        function getNextWord() {
+            if (deck.length === 0) {
+                // Si el mazo está vacío, copiamos la base de datos y barajamos
+                deck = [...fullDatabase];
+                deck.sort(() => Math.random() - 0.5); 
+                console.log("¡Mazo barajado de nuevo!");
+            }
+            return deck.pop(); // Sacamos la última carta
         }
 
         function nextLevel() {
             document.getElementById('win-screen').classList.add('hidden');
             currentIdx = 0;
-            currentLevel = database[Math.floor(Math.random() * database.length)];
+            currentLevel = getNextWord(); // Usamos el sistema sin repetir
             
             const slots = document.getElementById('slots-container');
             slots.innerHTML = '';
             for (let char of currentLevel.word) {
-                let s = document.createElement('div');
-                s.className = 'target-box';
-                s.innerText = '_';
+                let s = document.createElement('div'); s.className = 'target-box'; s.innerText = '_';
                 slots.appendChild(s);
             }
             
             spawnBubbles(currentLevel.word);
-            speak("Busca las letras de " + currentLevel.word.toLowerCase());
+            speak("Busca las letras de... " + currentLevel.word.toLowerCase());
         }
 
-        // --- SISTEMA ANTI-CHOQUE PARA BURBUJAS ---
         function spawnBubbles(word) {
             const container = document.getElementById('bubbles-container');
             container.innerHTML = '';
             const letters = word.split('').sort(() => Math.random() - 0.5);
+            const placed = [];
             
-            // Lista para guardar dónde pusimos las burbujas anteriores
-            const placedBubbles = [];
-            const bubbleSize = 70; // Tamaño de la burbuja
-            const margin = 10; // Espacio mínimo entre burbujas
-
             letters.forEach(char => {
-                let b = document.createElement('div');
-                b.className = 'bubble';
-                b.innerText = char;
+                let b = document.createElement('div'); b.className = 'bubble'; b.innerText = char;
+                let found = false, attempts = 0, x, y;
                 
-                let placed = false;
-                let attempts = 0;
-                let x, y;
-
-                // Intentar encontrar un lugar libre (máximo 100 intentos)
-                while (!placed && attempts < 100) {
-                    // Generar posición aleatoria respetando márgenes de pantalla
-                    // X: Entre 10px y Ancho - 80px
-                    x = Math.random() * (window.innerWidth - bubbleSize - 20) + 10;
-                    // Y: Entre 130px (bajo el HUD) y Alto - 100px
-                    y = Math.random() * (window.innerHeight - 230) + 130;
-
-                    // Revisar si choca con alguna burbuja ya puesta
+                while (!found && attempts < 50) {
+                    x = Math.random() * (window.innerWidth - 80) + 10;
+                    y = Math.random() * (window.innerHeight - 250) + 140;
                     let overlap = false;
-                    for (let pos of placedBubbles) {
-                        let dx = x - pos.x;
-                        let dy = y - pos.y;
-                        let distance = Math.hypot(dx, dy); // Pitágoras
-
-                        if (distance < bubbleSize + margin) {
-                            overlap = true; // ¡Choca!
-                            break;
-                        }
+                    for (let p of placed) {
+                        if (Math.hypot(x - p.x, y - p.y) < 80) overlap = true;
                     }
-
-                    if (!overlap) {
-                        placed = true; // ¡Lugar válido encontrado!
-                    }
+                    if (!overlap) found = true;
                     attempts++;
                 }
-
-                // Si no encontró lugar en 100 intentos, la pone donde cayó el último intento (fallback)
-                b.style.left = x + 'px';
-                b.style.top = y + 'px';
+                b.style.left = x + 'px'; b.style.top = y + 'px';
+                placed.push({x, y});
                 
-                // Guardar esta posición para comparar con las siguientes
-                placedBubbles.push({x: x, y: y});
-
-                // Eventos de toque
                 const trigger = (e) => { if(e.preventDefault) e.preventDefault(); handleInput(b); };
                 b.addEventListener('touchstart', trigger, {passive:false});
                 b.addEventListener('click', trigger);
-                
                 container.appendChild(b);
+            });
+        }
+
+        // === LÓGICA DE JUEGO Y VOZ HUMANA ===
+        let lastHit = 0;
+        function checkCollision(x, y) {
+            if(Date.now() - lastHit < 400) return;
+            document.querySelectorAll('.bubble').forEach(b => {
+                const rect = b.getBoundingClientRect();
+                if (Math.hypot(x - (rect.left + 35), y - (rect.top + 35)) < 45) {
+                    lastHit = Date.now(); handleInput(b);
+                }
             });
         }
 
         function handleInput(b) {
             if (b.innerText === currentLevel.word[currentIdx]) {
                 speak(b.innerText.toLowerCase());
-                b.style.transform = "scale(1.5)";
-                b.style.opacity = "0";
+                b.style.transform = "scale(1.5)"; b.style.opacity = "0";
                 setTimeout(() => b.remove(), 200);
                 
                 const slots = document.querySelectorAll('.target-box');
@@ -312,7 +274,7 @@
                 b.style.background = 'red';
                 speak("Esa no");
                 if(navigator.vibrate) navigator.vibrate(200);
-                setTimeout(() => b.style.background = 'radial-gradient(#FFD700, #FFA500)', 500);
+                setTimeout(() => b.style.background = 'radial-gradient(#FFD700, #FF8F00)', 500);
             }
         }
 
@@ -320,14 +282,24 @@
             document.getElementById('win-word').innerText = currentLevel.word;
             document.getElementById('reward-image').src = `https://loremflickr.com/400/400/${currentLevel.tag}?lock=${Date.now()}`;
             document.getElementById('win-screen').classList.remove('hidden');
-            speak("¡Muy bien! " + currentLevel.word.toLowerCase());
+            speak("¡Excelente! Es un " + currentLevel.word.toLowerCase());
         }
 
+        // Función de voz mejorada
         function speak(text) {
-            if(window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+            if (synth.speaking) synth.cancel();
             const u = new SpeechSynthesisUtterance(text);
+            
+            // Intentar buscar una voz en español de calidad (Google o Microsoft)
+            if (voices.length === 0) voices = synth.getVoices();
+            const bestVoice = voices.find(v => v.lang.includes('es') && (v.name.includes('Google') || v.name.includes('Paulina') || v.name.includes('Monica')));
+            
+            if (bestVoice) u.voice = bestVoice;
             u.lang = 'es-ES';
-            window.speechSynthesis.speak(u);
+            u.rate = 0.9; // Un poco más lento para que sea claro para niños
+            u.pitch = 1.0;
+            
+            synth.speak(u);
         }
     </script>
 </body>
