@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PascalGames Mobile</title>
+    <title>PascalGames Mobile V6</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
@@ -11,30 +11,31 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
     <style>
-        body, html { margin: 0; padding: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #000; }
+        body, html { margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; background-color: #000; }
         
-        /* VIDEO Y CANVAS */
-        .camera-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-        .input_video { display: none; } /* El video crudo se oculta */
-        .output_canvas { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); } /* Espejo */
-        
-        /* CAPAS JUEGO */
+        /* CONTENEDORES VIDEO */
+        .camera-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; background: #000; }
+        /* El video real se deja invisible, pintamos en el canvas */
+        .input_video { display: none; position: absolute; top:0; left:0; } 
+        .output_canvas { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+
+        /* HUD Y JUEGO */
         #game-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
-        #finger-cursor { position: absolute; width: 20px; height: 20px; background: rgba(255,0,0,0.6); border: 2px solid white; border-radius: 50%; z-index: 10; display: none; pointer-events: none; }
-        
-        /* HUD (TEXTO) */
-        #hud { position: absolute; top: 0; width: 100%; text-align: center; z-index: 15; padding: 10px 0; background: linear-gradient(rgba(0,0,0,0.6), transparent); }
+        #hud { position: absolute; top: 0; width: 100%; text-align: center; z-index: 15; padding: 10px 0; background: rgba(0,0,0,0.3); }
         .target-box { display: inline-block; width: 45px; height: 45px; margin: 3px; background: rgba(255,255,255,0.9); border-radius: 8px; font-size: 28px; line-height: 45px; font-weight: bold; color: #333; }
-        .filled { background: #4CAF50; color: white; border: 2px solid #fff; }
+        .filled { background: #4CAF50; color: white; }
         
-        /* BURBUJAS */
-        .bubble { position: absolute; width: 70px; height: 70px; background: gold; border: 3px solid white; border-radius: 50%; text-align: center; line-height: 65px; font-size: 35px; font-weight: bold; color: #d84315; cursor: pointer; pointer-events: auto; animation: float 3s infinite ease-in-out alternate; touch-action: manipulation; }
-        
+        /* BURBUJAS Y CURSOR */
+        .bubble { position: absolute; width: 75px; height: 75px; background: gold; border: 3px solid white; border-radius: 50%; text-align: center; line-height: 70px; font-size: 35px; font-weight: bold; color: #d84315; cursor: pointer; pointer-events: auto; animation: float 3s infinite ease-in-out alternate; }
+        #finger-cursor { position: absolute; width: 20px; height: 20px; background: rgba(255,0,0,0.5); border: 2px solid white; border-radius: 50%; z-index: 20; display: none; pointer-events: none; }
+
         /* PANTALLAS */
-        .screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 50; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; }
-        button { padding: 15px 50px; font-size: 20px; background: #2196F3; color: white; border: none; border-radius: 50px; margin-top: 20px; cursor: pointer; font-weight: bold; }
-        #reward-image { width: 80%; max-width: 300px; border-radius: 15px; margin: 20px; border: 4px solid white; height: 200px; object-fit: cover; background: #333; }
+        .screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #111; z-index: 50; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; padding: 20px; }
+        button { padding: 15px 40px; font-size: 20px; background: #2196F3; color: white; border: none; border-radius: 50px; margin-top: 20px; }
         .hidden { display: none !important; }
+        
+        /* CONSOLA DE DEPURACIÓN (VISIBLE SOLO SI HAY ERROR) */
+        #debug-console { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(0,0,0,0.8); color: red; font-size: 10px; padding: 5px; z-index: 100; text-align: left; max-height: 100px; overflow: scroll; pointer-events: none; }
         
         @keyframes float { 0% {transform: translateY(0);} 100% {transform: translateY(-15px);} }
     </style>
@@ -42,124 +43,161 @@
 <body>
 
     <div class="camera-container">
-        <video class="input_video" playsinline autoplay muted></video>
+        <video class="input_video" playsinline muted></video>
         <canvas class="output_canvas"></canvas>
     </div>
 
     <div id="finger-cursor"></div>
     <div id="game-layer"><div id="bubbles-container"></div></div>
-    
-    <div id="hud" class="hidden">
-        <div id="slots-container"></div>
-    </div>
-    
+    <div id="hud" class="hidden"><div id="slots-container"></div></div>
+
     <div id="main-menu" class="screen">
-        <h1 style="color:#FFD700; margin-bottom:10px;">PascalGames</h1>
-        <p>Versión Móvil</p>
-        <button onclick="startGame()">📷 ACTIVAR CÁMARA</button>
-        <p id="loading-msg" style="display:none; color:#aaa; margin-top:20px;">Iniciando sistema...</p>
-        <p style="font-size: 10px; color: #555; margin-top: 50px;">Si falla, revisa los permisos del navegador</p>
+        <h1 style="color: gold;">PascalGames V6</h1>
+        <p>Versión "Todo Terreno"</p>
+        <button onclick="startSystem()">INICIAR CÁMARA</button>
+        <p id="status-msg" style="margin-top:20px; color:#aaa; font-size: 14px;">Listo para cargar</p>
     </div>
 
     <div id="win-screen" class="screen hidden">
-        <h2 id="win-word" style="font-size:40px; color:#4CAF50; margin:0;">PALABRA</h2>
-        <img id="reward-image" src="" alt="Premio">
+        <h2 id="win-word" style="font-size: 40px; color: #4CAF50;">PALABRA</h2>
+        <img id="reward-image" style="width:250px; height:250px; object-fit:cover; border-radius:15px; margin:20px; background:#333;" src="" alt="">
         <button onclick="nextLevel()">Siguiente ➡️</button>
     </div>
 
-    <script>
-        const database = [
-            {word:"PERRO",tag:"dog"}, {word:"GATO",tag:"cat"}, {word:"SOL",tag:"sun"},
-            {word:"LUNA",tag:"moon"}, {word:"CASA",tag:"house"}, {word:"AUTO",tag:"car"},
-            {word:"FLOR",tag:"flower"}, {word:"PATO",tag:"duck"}, {word:"LEON",tag:"lion"},
-            {word:"MAMA",tag:"mom"}, {word:"PAPA",tag:"dad"}, {word:"AGUA",tag:"water"}
-        ];
+    <div id="debug-console"></div>
 
-        let currentLevel, currentIdx=0;
-        const synth = window.speechSynthesis;
+    <script>
+        // === CONFIGURACIÓN ===
+        const database = [
+            {word:"MAMA",tag:"mom"}, {word:"PAPA",tag:"dad"}, {word:"OSITO",tag:"teddy bear"},
+            {word:"PERRO",tag:"dog"}, {word:"GATO",tag:"cat"}, {word:"AUTO",tag:"car"},
+            {word:"SOL",tag:"sun"}, {word:"LUNA",tag:"moon"}, {word:"FLOR",tag:"flower"}
+        ];
+        
         const videoElement = document.querySelector('.input_video');
         const canvasElement = document.querySelector('.output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
+        const debugConsole = document.getElementById('debug-console');
         const fingerCursor = document.getElementById('finger-cursor');
+        let hands;
+        let camera;
+        let currentLevel;
+        let currentIdx = 0;
 
-        async function startGame() {
+        // Función para escribir errores en pantalla
+        function log(msg) {
+            console.log(msg);
+            debugConsole.innerText += "\n> " + msg;
+        }
+
+        async function startSystem() {
             const btn = document.querySelector('#main-menu button');
-            const msg = document.getElementById('loading-msg');
+            const status = document.getElementById('status-msg');
             btn.style.display = 'none';
-            msg.style.display = 'block';
+            status.innerText = "Solicitando cámara...";
+            log("Iniciando sistema...");
 
-            // Ajustar Canvas al tamaño real del dispositivo
-            canvasElement.width = window.innerWidth; 
+            // Ajustar canvas
+            canvasElement.width = window.innerWidth;
             canvasElement.height = window.innerHeight;
 
             try {
-                // 1. Configurar MediaPipe
-                const hands = new Hands({locateFile:(f)=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
+                // 1. Iniciar MediaPipe
+                log("Cargando IA de manos...");
+                hands = new Hands({locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+                }});
+                
                 hands.setOptions({
                     maxNumHands: 1,
-                    modelComplexity: 1,
+                    modelComplexity: 0, // 0 es más rápido para móviles (Lite)
                     minDetectionConfidence: 0.5,
                     minTrackingConfidence: 0.5
                 });
-                hands.onResults(onResults);
+                
+                hands.onResults(onHandsResults);
 
-                // 2. Configurar Cámara con manejo de errores
-                const camera = new Camera(videoElement, {
-                    onFrame: async() => { await hands.send({image:videoElement}); },
-                    width: 1280,
-                    height: 720,
-                    facingMode: 'user' // Cámara frontal
-                });
+                // 2. Iniciar Cámara (NUEVO MÉTODO MANUAL)
+                log("Accediendo a cámara...");
                 
-                await camera.start();
+                // NO pedimos resolución específica, dejamos que el navegador decida
+                const constraints = { 
+                    video: { 
+                        facingMode: 'user', // Cámara frontal
+                        width: { ideal: 640 }, // Preferimos baja res para rendimiento
+                        height: { ideal: 480 } 
+                    } 
+                };
+
+                // Usamos getUserMedia nativo en lugar de la utilidad de MediaPipe
+                // Esto es mucho más compatible con Android
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                videoElement.srcObject = stream;
                 
-                // Si llegamos aquí, funcionó
+                // Esperar a que el video tenga datos
+                videoElement.onloadedmetadata = () => {
+                    log("Cámara lista. Reproduciendo...");
+                    videoElement.play();
+                    startProcessing(); // Iniciar bucle de IA
+                };
+
+                // Ocultar menú
                 document.getElementById('main-menu').classList.add('hidden');
                 document.getElementById('hud').classList.remove('hidden');
                 nextLevel();
 
             } catch (error) {
-                alert("Error al iniciar cámara: " + error.message);
-                console.error(error);
-                msg.innerText = "Error: " + error.message;
-                btn.style.display = 'block'; // Mostrar botón de nuevo
+                log("ERROR FATAL: " + error.name + " - " + error.message);
+                alert("Error: " + error.message + ". Revisa que el sitio sea HTTPS y hayas dado permiso.");
+                btn.style.display = 'block';
             }
         }
 
-        function onResults(results) {
+        // Bucle manual de procesamiento (Mejor rendimiento en móvil)
+        async function startProcessing() {
+            async function step() {
+                if (videoElement.readyState >= 2) {
+                    await hands.send({image: videoElement});
+                }
+                requestAnimationFrame(step);
+            }
+            step();
+        }
+
+        function onHandsResults(results) {
+            // Dibujar cámara en canvas
             canvasCtx.save();
-            canvasCtx.clearRect(0,0,canvasElement.width,canvasElement.height);
-            canvasCtx.drawImage(results.image,0,0,canvasElement.width,canvasElement.height);
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
             
-            if(results.multiHandLandmarks && results.multiHandLandmarks.length > 0){
-                const tip = results.multiHandLandmarks[0][8]; // Dedo índice
-                const x = (1-tip.x) * window.innerWidth;
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const tip = results.multiHandLandmarks[0][8]; // Punta índice
+                const x = (1 - tip.x) * window.innerWidth;
                 const y = tip.y * window.innerHeight;
                 
                 fingerCursor.style.display = 'block';
-                fingerCursor.style.left = (x-10)+'px'; 
-                fingerCursor.style.top = (y-10)+'px';
+                fingerCursor.style.left = (x - 10) + 'px';
+                fingerCursor.style.top = (y - 10) + 'px';
                 
-                checkHit(x,y);
-            } else { 
-                fingerCursor.style.display = 'none'; 
+                checkCollision(x, y);
+            } else {
+                fingerCursor.style.display = 'none';
             }
             canvasCtx.restore();
         }
 
         let lastHit = 0;
-        function checkHit(x,y){
-            if(Date.now() - lastHit < 500) return; // Esperar 0.5s entre toques
+        function checkCollision(x, y) {
+            if(Date.now() - lastHit < 500) return;
             
             const bubbles = document.querySelectorAll('.bubble');
             bubbles.forEach(b => {
-                const r = b.getBoundingClientRect();
-                // Distancia entre el dedo y el centro de la burbuja
-                const dist = Math.hypot(x - (r.left + r.width/2), y - (r.top + r.height/2));
+                const rect = b.getBoundingClientRect();
+                const dist = Math.hypot(x - (rect.left + rect.width/2), y - (rect.top + rect.height/2));
                 
-                if(dist < r.width/2 + 10) { // +10 de margen de error
-                    lastHit = Date.now(); 
-                    handleInput(b); 
+                if (dist < rect.width/2 + 10) {
+                    lastHit = Date.now();
+                    handleInput(b);
                 }
             });
         }
@@ -167,39 +205,34 @@
         function nextLevel() {
             document.getElementById('win-screen').classList.add('hidden');
             currentIdx = 0;
-            currentLevel = database[Math.floor(Math.random()*database.length)];
+            currentLevel = database[Math.floor(Math.random() * database.length)];
             
             const slots = document.getElementById('slots-container');
             slots.innerHTML = '';
-            
-            // Crear casillas vacías
-            for(let c of currentLevel.word) {
-                let d = document.createElement('div'); 
-                d.className = 'target-box'; 
-                d.innerText = '_';
-                slots.appendChild(d);
+            for (let char of currentLevel.word) {
+                let s = document.createElement('div');
+                s.className = 'target-box';
+                s.innerText = '_';
+                slots.appendChild(s);
             }
             
             spawnBubbles(currentLevel.word);
-            speak("Busca las letras para... " + currentLevel.word.toLowerCase());
+            speak("Vamos a escribir " + currentLevel.word);
         }
 
         function spawnBubbles(word) {
             const cont = document.getElementById('bubbles-container');
             cont.innerHTML = '';
+            const letters = word.split('').sort(() => Math.random() - 0.5);
             
-            const chars = word.split('').sort(() => Math.random() - 0.5);
-            
-            chars.forEach(c => {
-                let b = document.createElement('div'); 
-                b.className = 'bubble'; 
-                b.innerText = c;
-                
-                // Posición aleatoria segura
+            letters.forEach(char => {
+                let b = document.createElement('div');
+                b.className = 'bubble';
+                b.innerText = char;
                 b.style.left = Math.random() * (window.innerWidth - 80) + 'px';
                 b.style.top = (100 + Math.random() * (window.innerHeight - 250)) + 'px';
                 
-                // Soporte para toque con dedo (además de la cámara)
+                // Soporte Touch + Click
                 b.onclick = () => handleInput(b);
                 b.ontouchend = (e) => { e.preventDefault(); handleInput(b); };
                 
@@ -208,27 +241,19 @@
         }
 
         function handleInput(b) {
-            // Verificar si es la letra correcta
-            if(b.innerText === currentLevel.word[currentIdx]) {
+            if (b.innerText === currentLevel.word[currentIdx]) {
                 speak(b.innerText);
-                
-                // Efecto visual
                 b.style.transform = "scale(1.5)";
                 b.style.opacity = "0";
-                setTimeout(() => b.remove(), 300);
+                setTimeout(() => b.remove(), 200);
                 
-                // Llenar casilla
-                const slot = document.getElementsByClassName('target-box')[currentIdx];
-                slot.innerText = b.innerText;
-                slot.classList.add('filled');
-                
+                const slots = document.querySelectorAll('.target-box');
+                slots[currentIdx].innerText = b.innerText;
+                slots[currentIdx].classList.add('filled');
                 currentIdx++;
                 
-                // Verificar victoria
-                if(currentIdx >= currentLevel.word.length) winGame();
-                
+                if (currentIdx >= currentLevel.word.length) winGame();
             } else {
-                // Error
                 b.style.backgroundColor = 'red';
                 speak("No");
                 if(navigator.vibrate) navigator.vibrate(200);
@@ -238,17 +263,16 @@
 
         function winGame() {
             document.getElementById('win-word').innerText = currentLevel.word;
-            // Cargar imagen nueva
             document.getElementById('reward-image').src = `https://loremflickr.com/300/300/${currentLevel.tag}?lock=${Date.now()}`;
             document.getElementById('win-screen').classList.remove('hidden');
-            speak("¡Excelente! Es un " + currentLevel.word.toLowerCase());
+            speak("¡Muy bien!");
         }
 
-        function speak(t) { 
-            if(synth.speaking) synth.cancel();
-            const u = new SpeechSynthesisUtterance(t); 
-            u.lang = 'es-ES'; 
-            synth.speak(u); 
+        function speak(text) {
+            if(window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(text);
+            u.lang = 'es-ES';
+            window.speechSynthesis.speak(u);
         }
     </script>
 </body>
