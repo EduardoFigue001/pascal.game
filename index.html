@@ -3,444 +3,253 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PascalGames V4 - Ultimate</title>
+    <title>PascalGames Mobile</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 
     <style>
-        /* --- ESTILOS GENERALES --- */
-        body, html {
-            margin: 0; padding: 0; overflow: hidden;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #1a1a1a;
-            user-select: none;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        /* --- CAPAS DE VIDEO Y JUEGO --- */
-        .camera-container {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
-        }
-        .input_video { display: none; }
-        .output_canvas {
-            width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1);
-        }
-
-        #game-layer {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none;
-        }
-
-        /* --- CURSOR DEDO (Modo PC) --- */
-        #finger-cursor {
-            position: absolute; width: 25px; height: 25px;
-            background: rgba(255, 0, 55, 0.6);
-            border: 3px solid white; border-radius: 50%;
-            z-index: 10; pointer-events: none; display: none;
-            box-shadow: 0 0 15px rgba(255, 0, 55, 0.8);
-            transition: left 0.05s linear, top 0.05s linear;
-        }
-
-        /* --- INTERFAZ (HUD) --- */
-        #hud {
-            position: absolute; top: 0; width: 100%;
-            text-align: center; pointer-events: auto; z-index: 15;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent);
-            padding: 20px 0;
-        }
-
-        .target-box {
-            display: inline-block; width: 55px; height: 55px; margin: 4px;
-            background: rgba(255, 255, 255, 0.95);
-            border: 3px solid #333; border-radius: 12px;
-            font-size: 35px; line-height: 55px; font-weight: bold; color: #333;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            transition: transform 0.2s;
-        }
-        .filled { background: #4CAF50; color: white; border-color: #2E7D32; transform: scale(1.1); }
-
-        /* --- BURBUJAS DE LETRAS --- */
-        .bubble {
-            position: absolute; width: 85px; height: 85px;
-            background: radial-gradient(circle at 30% 30%, #fff176, #fbc02d);
-            border: 4px solid #fff; border-radius: 50%;
-            text-align: center; line-height: 80px;
-            font-size: 45px; font-weight: 900; color: #e65100;
-            box-shadow: 0 8px 15px rgba(0,0,0,0.4);
-            cursor: pointer; pointer-events: auto;
-            touch-action: manipulation;
-            /* Animación suave */
-            transition: transform 0.1s, opacity 0.2s;
-            animation: float 5s infinite ease-in-out alternate;
-        }
-        .bubble:active { transform: scale(0.9); filter: brightness(0.8); }
-
-        /* --- PANTALLAS (MENU, WIN, LOADING) --- */
-        .screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.92); z-index: 50;
-            display: flex; flex-direction: column;
-            justify-content: center; align-items: center;
-            color: white; text-align: center;
-            transition: opacity 0.5s;
-        }
-
-        h1 { font-size: 40px; margin: 0 0 20px 0; text-shadow: 0 0 10px #2196F3; }
-        p { font-size: 18px; color: #ccc; max-width: 80%; margin: 10px auto; }
-
-        button {
-            padding: 18px 50px; font-size: 22px; font-weight: bold;
-            background: linear-gradient(45deg, #2196F3, #21CBF3);
-            color: white; border: none; border-radius: 50px;
-            cursor: pointer; margin-top: 30px;
-            box-shadow: 0 5px 20px rgba(33, 203, 243, 0.5);
-            transition: transform 0.2s;
-        }
-        button:active { transform: scale(0.95); }
-
-        /* Imagen de recompensa */
-        #reward-image {
-            width: 80%; max-width: 400px; height: 300px;
-            object-fit: cover; border-radius: 20px;
-            border: 5px solid white;
-            box-shadow: 0 0 30px rgba(255,255,255,0.2);
-            margin: 20px 0;
-            background-color: #333;
-        }
-
-        .hidden { opacity: 0; pointer-events: none; display: none !important; }
+        body, html { margin: 0; padding: 0; overflow: hidden; font-family: 'Segoe UI', sans-serif; background-color: #000; }
         
-        @keyframes float { 0% {transform: translateY(0px);} 100% {transform: translateY(-20px);} }
-        @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-10px);} 75% {transform: translateX(10px);} }
-        .shake-anim { animation: shake 0.4s; background-color: #ff5252 !important; color: white !important; }
-
+        /* VIDEO Y CANVAS */
+        .camera-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        .input_video { display: none; } /* El video crudo se oculta */
+        .output_canvas { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); } /* Espejo */
+        
+        /* CAPAS JUEGO */
+        #game-layer { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 5; pointer-events: none; }
+        #finger-cursor { position: absolute; width: 20px; height: 20px; background: rgba(255,0,0,0.6); border: 2px solid white; border-radius: 50%; z-index: 10; display: none; pointer-events: none; }
+        
+        /* HUD (TEXTO) */
+        #hud { position: absolute; top: 0; width: 100%; text-align: center; z-index: 15; padding: 10px 0; background: linear-gradient(rgba(0,0,0,0.6), transparent); }
+        .target-box { display: inline-block; width: 45px; height: 45px; margin: 3px; background: rgba(255,255,255,0.9); border-radius: 8px; font-size: 28px; line-height: 45px; font-weight: bold; color: #333; }
+        .filled { background: #4CAF50; color: white; border: 2px solid #fff; }
+        
+        /* BURBUJAS */
+        .bubble { position: absolute; width: 70px; height: 70px; background: gold; border: 3px solid white; border-radius: 50%; text-align: center; line-height: 65px; font-size: 35px; font-weight: bold; color: #d84315; cursor: pointer; pointer-events: auto; animation: float 3s infinite ease-in-out alternate; touch-action: manipulation; }
+        
+        /* PANTALLAS */
+        .screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 50; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; }
+        button { padding: 15px 50px; font-size: 20px; background: #2196F3; color: white; border: none; border-radius: 50px; margin-top: 20px; cursor: pointer; font-weight: bold; }
+        #reward-image { width: 80%; max-width: 300px; border-radius: 15px; margin: 20px; border: 4px solid white; height: 200px; object-fit: cover; background: #333; }
+        .hidden { display: none !important; }
+        
+        @keyframes float { 0% {transform: translateY(0);} 100% {transform: translateY(-15px);} }
     </style>
 </head>
 <body>
 
     <div class="camera-container">
-        <video class="input_video"></video>
+        <video class="input_video" playsinline autoplay muted></video>
         <canvas class="output_canvas"></canvas>
     </div>
 
     <div id="finger-cursor"></div>
-
-    <div id="game-layer">
-        <div id="bubbles-container"></div>
-    </div>
-
+    <div id="game-layer"><div id="bubbles-container"></div></div>
+    
     <div id="hud" class="hidden">
         <div id="slots-container"></div>
     </div>
-
+    
     <div id="main-menu" class="screen">
-        <h1 style="color: #FFD700; font-size: 50px;">PascalGames</h1>
-        <p>Aventura de Palabras en Realidad Aumentada</p>
-        <div style="font-size: 60px; margin: 20px;">🚀 🦁 🎈</div>
-        <p>Instrucciones:</p>
-        <p style="font-size: 14px;">1. Permite la cámara.<br>2. Toca las letras en orden con tu dedo.</p>
-        <button onclick="startGame()">¡JUGAR!</button>
-        <p id="loading-text" style="margin-top:20px; font-size:12px; color:#666; display:none;">Cargando Inteligencia Artificial...</p>
+        <h1 style="color:#FFD700; margin-bottom:10px;">PascalGames</h1>
+        <p>Versión Móvil</p>
+        <button onclick="startGame()">📷 ACTIVAR CÁMARA</button>
+        <p id="loading-msg" style="display:none; color:#aaa; margin-top:20px;">Iniciando sistema...</p>
+        <p style="font-size: 10px; color: #555; margin-top: 50px;">Si falla, revisa los permisos del navegador</p>
     </div>
 
     <div id="win-screen" class="screen hidden">
-        <h2 id="win-word" style="font-size: 40px; margin: 0; color: #4CAF50;">PALABRA</h2>
-        
+        <h2 id="win-word" style="font-size:40px; color:#4CAF50; margin:0;">PALABRA</h2>
         <img id="reward-image" src="" alt="Premio">
-        
-        <h3 style="margin:0;">¡EXCELENTE!</h3>
-        <button onclick="nextLevel()" style="background: #4CAF50; box-shadow: 0 5px 20px rgba(76, 175, 80, 0.5);">Siguiente ➡️</button>
+        <button onclick="nextLevel()">Siguiente ➡️</button>
     </div>
 
     <script>
-        // === BASE DE DATOS DE PALABRAS (ESPAÑOL -> KEYWORD INGLÉS PARA FOTO) ===
-        // Usamos keywords en inglés para que la búsqueda de fotos sea más precisa
         const database = [
-            {word: "PERRO", tag: "dog"}, {word: "GATO", tag: "cat"}, {word: "LEON", tag: "lion"},
-            {word: "TIGRE", tag: "tiger"}, {word: "OSO", tag: "bear"}, {word: "PATO", tag: "duck"},
-            {word: "VACA", tag: "cow"}, {word: "CERDO", tag: "pig"}, {word: "RANA", tag: "frog"},
-            {word: "SOL", tag: "sun"}, {word: "LUNA", tag: "moon"}, {word: "CASA", tag: "house"},
-            {word: "AUTO", tag: "car"}, {word: "TREN", tag: "train"}, {word: "AVION", tag: "airplane"},
-            {word: "FLOR", tag: "flower"}, {word: "ARBOL", tag: "tree"}, {word: "AGUA", tag: "water"},
-            {word: "MANZANA", tag: "apple"}, {word: "BANANA", tag: "banana"}, {word: "UVA", tag: "grape"},
-            {word: "MESA", tag: "table"}, {word: "SILLA", tag: "chair"}, {word: "PELOTA", tag: "ball"},
-            {word: "ZAPATO", tag: "shoe"}, {word: "RELOJ", tag: "clock"}, {word: "LIBRO", tag: "book"},
-            {word: "LAPIZ", tag: "pencil"}, {word: "OJO", tag: "eye"}, {word: "BOCA", tag: "mouth"},
-            {word: "MANO", tag: "hand"}, {word: "PIE", tag: "foot"}, {word: "PAPA", tag: "dad"},
-            {word: "MAMA", tag: "mom"}, {word: "BEBE", tag: "baby"}, {word: "PEZ", tag: "fish"},
-            {word: "PAJARO", tag: "bird"}, {word: "MARIPOSA", tag: "butterfly"}, {word: "ARAÑA", tag: "spider"},
-            {word: "RATON", tag: "mouse"}, {word: "CABALLO", tag: "horse"}, {word: "OVEJA", tag: "sheep"},
-            {word: "MONO", tag: "monkey"}, {word: "ELEFANTE", tag: "elephant"}, {word: "JIRAFA", tag: "giraffe"}
+            {word:"PERRO",tag:"dog"}, {word:"GATO",tag:"cat"}, {word:"SOL",tag:"sun"},
+            {word:"LUNA",tag:"moon"}, {word:"CASA",tag:"house"}, {word:"AUTO",tag:"car"},
+            {word:"FLOR",tag:"flower"}, {word:"PATO",tag:"duck"}, {word:"LEON",tag:"lion"},
+            {word:"MAMA",tag:"mom"}, {word:"PAPA",tag:"dad"}, {word:"AGUA",tag:"water"}
         ];
 
-        // === ESTADO DEL JUEGO ===
-        let deck = []; // Mazo de cartas actual
-        let currentLevel = null;
-        let currentIdx = 0;
-        let isCameraRunning = false;
+        let currentLevel, currentIdx=0;
         const synth = window.speechSynthesis;
-
-        // Elementos DOM
         const videoElement = document.querySelector('.input_video');
         const canvasElement = document.querySelector('.output_canvas');
         const canvasCtx = canvasElement.getContext('2d');
         const fingerCursor = document.getElementById('finger-cursor');
-        
-        // === LÓGICA DE BARAJAR (NO REPETIR) ===
-        function shuffleDeck() {
-            // Copiar base de datos original
-            deck = [...database];
-            // Algoritmo Fisher-Yates para barajar
-            for (let i = deck.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [deck[i], deck[j]] = [deck[j], deck[i]];
-            }
-            console.log("Mazo barajado. Cartas:", deck.length);
-        }
 
-        function getNextWord() {
-            if (deck.length === 0) {
-                shuffleDeck(); // Si se acaban, barajar de nuevo
-            }
-            return deck.pop(); // Sacar la última
-        }
-
-        // === INICIO DEL SISTEMA ===
         async function startGame() {
-            document.querySelector('button').style.display = 'none';
-            document.getElementById('loading-text').style.display = 'block';
+            const btn = document.querySelector('#main-menu button');
+            const msg = document.getElementById('loading-msg');
+            btn.style.display = 'none';
+            msg.style.display = 'block';
 
-            // Configurar Canvas
-            canvasElement.width = window.innerWidth;
+            // Ajustar Canvas al tamaño real del dispositivo
+            canvasElement.width = window.innerWidth; 
             canvasElement.height = window.innerHeight;
 
-            // Iniciar MediaPipe (Manos)
-            const hands = new Hands({locateFile: (file) => {
-                return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
-            }});
+            try {
+                // 1. Configurar MediaPipe
+                const hands = new Hands({locateFile:(f)=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`});
+                hands.setOptions({
+                    maxNumHands: 1,
+                    modelComplexity: 1,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+                hands.onResults(onResults);
 
-            hands.setOptions({
-                maxNumHands: 1,
-                modelComplexity: 1,
-                minDetectionConfidence: 0.6,
-                minTrackingConfidence: 0.5
-            });
+                // 2. Configurar Cámara con manejo de errores
+                const camera = new Camera(videoElement, {
+                    onFrame: async() => { await hands.send({image:videoElement}); },
+                    width: 1280,
+                    height: 720,
+                    facingMode: 'user' // Cámara frontal
+                });
+                
+                await camera.start();
+                
+                // Si llegamos aquí, funcionó
+                document.getElementById('main-menu').classList.add('hidden');
+                document.getElementById('hud').classList.remove('hidden');
+                nextLevel();
 
-            hands.onResults(onHandsResults);
-
-            // Iniciar Cámara
-            const camera = new Camera(videoElement, {
-                onFrame: async () => {
-                    await hands.send({image: videoElement});
-                },
-                width: 1280,
-                height: 720
-            });
-
-            await camera.start();
-            isCameraRunning = true;
-
-            // Transición UI
-            document.getElementById('main-menu').classList.add('hidden');
-            document.getElementById('hud').classList.remove('hidden');
-            
-            // Primera vez que se juega, barajamos
-            shuffleDeck();
-            nextLevel();
+            } catch (error) {
+                alert("Error al iniciar cámara: " + error.message);
+                console.error(error);
+                msg.innerText = "Error: " + error.message;
+                btn.style.display = 'block'; // Mostrar botón de nuevo
+            }
         }
 
-        // === BUCLE PRINCIPAL (DETECCION DE MANOS) ===
-        let lastTouchTime = 0;
-
-        function onHandsResults(results) {
-            // Limpiar y dibujar video
+        function onResults(results) {
             canvasCtx.save();
-            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
-
-            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-                const landmarks = results.multiHandLandmarks[0];
-                const indexFinger = landmarks[8]; // Punta del índice
-
-                // Coordenadas pantalla (Invertir X por modo espejo)
-                const x = (1 - indexFinger.x) * window.innerWidth;
-                const y = indexFinger.y * window.innerHeight;
-
-                // Mover cursor
+            canvasCtx.clearRect(0,0,canvasElement.width,canvasElement.height);
+            canvasCtx.drawImage(results.image,0,0,canvasElement.width,canvasElement.height);
+            
+            if(results.multiHandLandmarks && results.multiHandLandmarks.length > 0){
+                const tip = results.multiHandLandmarks[0][8]; // Dedo índice
+                const x = (1-tip.x) * window.innerWidth;
+                const y = tip.y * window.innerHeight;
+                
                 fingerCursor.style.display = 'block';
-                fingerCursor.style.left = (x - 12) + 'px';
-                fingerCursor.style.top = (y - 12) + 'px';
-
-                // Detectar colisión
-                checkCollision(x, y);
-            } else {
-                fingerCursor.style.display = 'none';
+                fingerCursor.style.left = (x-10)+'px'; 
+                fingerCursor.style.top = (y-10)+'px';
+                
+                checkHit(x,y);
+            } else { 
+                fingerCursor.style.display = 'none'; 
             }
             canvasCtx.restore();
         }
 
-        function checkCollision(x, y) {
-            const now = Date.now();
-            if (now - lastTouchTime < 400) return; // Cooldown 0.4s
-
+        let lastHit = 0;
+        function checkHit(x,y){
+            if(Date.now() - lastHit < 500) return; // Esperar 0.5s entre toques
+            
             const bubbles = document.querySelectorAll('.bubble');
             bubbles.forEach(b => {
-                const rect = b.getBoundingClientRect();
-                // Formula de distancia (centro a centro) es más precisa para círculos
-                const centerX = rect.left + rect.width / 2;
-                const centerY = rect.top + rect.height / 2;
-                const distance = Math.hypot(x - centerX, y - centerY);
-
-                if (distance < rect.width / 2) { // Si toca dentro del radio
-                    lastTouchTime = now;
-                    handleInput(b);
+                const r = b.getBoundingClientRect();
+                // Distancia entre el dedo y el centro de la burbuja
+                const dist = Math.hypot(x - (r.left + r.width/2), y - (r.top + r.height/2));
+                
+                if(dist < r.width/2 + 10) { // +10 de margen de error
+                    lastHit = Date.now(); 
+                    handleInput(b); 
                 }
             });
         }
 
-        // === LOGICA DE NIVEL ===
         function nextLevel() {
             document.getElementById('win-screen').classList.add('hidden');
-            document.getElementById('hud').classList.remove('hidden');
-            
-            // Limpiar
-            const bubblesCont = document.getElementById('bubbles-container');
-            const slotsCont = document.getElementById('slots-container');
-            bubblesCont.innerHTML = '';
-            slotsCont.innerHTML = '';
             currentIdx = 0;
-
-            // Obtener nueva palabra
-            currentLevel = getNextWord();
-            const wordStr = currentLevel.word;
-
-            // Crear Slots
-            for (let char of wordStr) {
-                let slot = document.createElement('div');
-                slot.className = 'target-box';
-                slot.innerText = "_";
-                slotsCont.appendChild(slot);
+            currentLevel = database[Math.floor(Math.random()*database.length)];
+            
+            const slots = document.getElementById('slots-container');
+            slots.innerHTML = '';
+            
+            // Crear casillas vacías
+            for(let c of currentLevel.word) {
+                let d = document.createElement('div'); 
+                d.className = 'target-box'; 
+                d.innerText = '_';
+                slots.appendChild(d);
             }
-
-            // Crear Letras (Sin superposición)
-            spawnBubbles(wordStr);
-
-            speak("Forma la palabra... " + wordStr.toLowerCase());
+            
+            spawnBubbles(currentLevel.word);
+            speak("Busca las letras para... " + currentLevel.word.toLowerCase());
         }
 
         function spawnBubbles(word) {
-            const container = document.getElementById('bubbles-container');
-            const letters = word.split('').sort(() => Math.random() - 0.5);
-            const bubbles = [];
+            const cont = document.getElementById('bubbles-container');
+            cont.innerHTML = '';
             
-            // Zona segura (para no tapar HUD ni salir de pantalla)
-            const margin = 90; 
-            const minY = 120; 
-            const maxY = window.innerHeight - margin;
-            const maxX = window.innerWidth - margin;
-
-            letters.forEach(char => {
-                let b = document.createElement('div');
-                b.className = 'bubble';
-                b.innerText = char;
+            const chars = word.split('').sort(() => Math.random() - 0.5);
+            
+            chars.forEach(c => {
+                let b = document.createElement('div'); 
+                b.className = 'bubble'; 
+                b.innerText = c;
                 
-                // Algoritmo para encontrar espacio libre
-                let placed = false;
-                let attempts = 0;
+                // Posición aleatoria segura
+                b.style.left = Math.random() * (window.innerWidth - 80) + 'px';
+                b.style.top = (100 + Math.random() * (window.innerHeight - 250)) + 'px';
                 
-                while (!placed && attempts < 50) {
-                    let randX = Math.random() * (maxX - margin) + margin/2;
-                    let randY = Math.random() * (maxY - minY) + minY;
-                    
-                    // Chequear superposición con otras burbujas ya creadas
-                    let overlap = false;
-                    for (let other of bubbles) {
-                        let dx = randX - other.x;
-                        let dy = randY - other.y;
-                        if (Math.hypot(dx, dy) < 100) { // 100px de distancia mínima
-                            overlap = true;
-                            break;
-                        }
-                    }
-
-                    if (!overlap) {
-                        b.style.left = randX + 'px';
-                        b.style.top = randY + 'px';
-                        // Guardamos coords para comparar con las siguientes
-                        bubbles.push({x: randX, y: randY}); 
-                        placed = true;
-                    }
-                    attempts++;
-                }
-
-                // Mouse/Touch events para celular (además de la cámara)
+                // Soporte para toque con dedo (además de la cámara)
                 b.onclick = () => handleInput(b);
                 b.ontouchend = (e) => { e.preventDefault(); handleInput(b); };
                 
-                container.appendChild(b);
+                cont.appendChild(b);
             });
         }
 
-        function handleInput(bubble) {
-            const char = bubble.innerText;
-            const targetChar = currentLevel.word[currentIdx];
-
-            if (char === targetChar) {
-                // CORRECTO
-                speak(char);
-                bubble.style.transform = "scale(0)";
-                setTimeout(() => bubble.remove(), 200);
-
-                const slots = document.querySelectorAll('.target-box');
-                slots[currentIdx].innerText = char;
-                slots[currentIdx].classList.add('filled');
+        function handleInput(b) {
+            // Verificar si es la letra correcta
+            if(b.innerText === currentLevel.word[currentIdx]) {
+                speak(b.innerText);
+                
+                // Efecto visual
+                b.style.transform = "scale(1.5)";
+                b.style.opacity = "0";
+                setTimeout(() => b.remove(), 300);
+                
+                // Llenar casilla
+                const slot = document.getElementsByClassName('target-box')[currentIdx];
+                slot.innerText = b.innerText;
+                slot.classList.add('filled');
+                
                 currentIdx++;
-
-                if (currentIdx >= currentLevel.word.length) {
-                    winGame();
-                }
+                
+                // Verificar victoria
+                if(currentIdx >= currentLevel.word.length) winGame();
+                
             } else {
-                // ERROR
+                // Error
+                b.style.backgroundColor = 'red';
                 speak("No");
-                bubble.classList.add('shake-anim');
-                if(navigator.vibrate) navigator.vibrate(100);
-                setTimeout(() => bubble.classList.remove('shake-anim'), 400);
+                if(navigator.vibrate) navigator.vibrate(200);
+                setTimeout(() => b.style.backgroundColor = 'gold', 500);
             }
         }
 
         function winGame() {
-            setTimeout(() => {
-                const winScreen = document.getElementById('win-screen');
-                const winText = document.getElementById('win-word');
-                const rewardImg = document.getElementById('reward-image');
-
-                winText.innerText = currentLevel.word;
-                
-                // Buscar foto usando LoremFlickr (servicio gratuito de imágenes)
-                // Truco: Agregamos timestamp para evitar caché y tener fotos nuevas
-                const keyword = currentLevel.tag;
-                rewardImg.src = `https://loremflickr.com/400/300/${keyword}?lock=${Math.floor(Math.random()*1000)}`;
-
-                winScreen.classList.remove('hidden');
-                speak(`¡Muy bien! Es un ${currentLevel.word.toLowerCase()}`);
-            }, 500);
+            document.getElementById('win-word').innerText = currentLevel.word;
+            // Cargar imagen nueva
+            document.getElementById('reward-image').src = `https://loremflickr.com/300/300/${currentLevel.tag}?lock=${Date.now()}`;
+            document.getElementById('win-screen').classList.remove('hidden');
+            speak("¡Excelente! Es un " + currentLevel.word.toLowerCase());
         }
 
-        // === UTILIDADES ===
-        function speak(text) {
-            if (synth.speaking) synth.cancel();
-            const u = new SpeechSynthesisUtterance(text);
-            u.lang = 'es-ES';
-            synth.speak(u);
+        function speak(t) { 
+            if(synth.speaking) synth.cancel();
+            const u = new SpeechSynthesisUtterance(t); 
+            u.lang = 'es-ES'; 
+            synth.speak(u); 
         }
-
-        // Ajustar canvas al rotar pantalla
-        window.addEventListener('resize', () => {
-            canvasElement.width = window.innerWidth;
-            canvasElement.height = window.innerHeight;
-        });
-
     </script>
 </body>
 </html>
